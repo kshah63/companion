@@ -174,7 +174,7 @@
   .clue-log b { color: var(--accent); }
 
   /* ---------- Board ---------- */
-  #board {
+  #board, #spymasterBoard {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     gap: 8px;
@@ -252,6 +252,39 @@
   .win-modal.red-win { border: 3px solid var(--red); }
   .win-modal.blue-win { border: 3px solid var(--blue); }
 
+  .code-banner {
+    text-align: center;
+    background: var(--panel-light);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+  .code-banner .code-value {
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: 3px;
+    color: var(--accent);
+  }
+  .code-input {
+    width: 100%;
+    padding: 14px;
+    font-size: 1.3rem;
+    text-align: center;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    border-radius: 10px;
+    border: 2px solid var(--panel-light);
+    background: var(--panel);
+    color: var(--text);
+  }
+  .error-text { color: #ff8a75; font-size: 0.85rem; text-align: center; min-height: 1.2em; margin-top: 6px; }
+  .legend { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; font-size: 0.85rem; color: var(--muted); }
+  .legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+  .word-card.marked { opacity: 0.35; text-decoration: line-through; }
+  .hint-text { text-align: center; color: var(--muted); font-size: 0.85rem; margin: -6px 0 16px; }
+
   footer { text-align: center; color: var(--muted); font-size: 0.75rem; margin-top: 30px; }
 
   @media (max-width: 480px) {
@@ -263,43 +296,65 @@
 <body>
 <div id="app">
   <h1>CODENAMES</h1>
-  <div class="subtitle">Offline party word game &middot; pass-and-play &middot; no internet needed</div>
+  <div class="subtitle">Offline party word game &middot; play on your own phones &middot; no internet needed</div>
 
   <!-- ============ SETUP SCREEN ============ -->
   <div id="setupScreen">
     <div class="card-panel">
       <div class="field">
-        <label>Language</label>
-        <div class="btn-group" id="langGroup">
-          <button class="choice-btn" data-lang="en">English</button>
-          <button class="choice-btn" data-lang="es">Español</button>
-          <button class="choice-btn" data-lang="fr">Français</button>
-          <button class="choice-btn" data-lang="hi">Hindi (Roman)</button>
+        <label>This phone is...</label>
+        <div class="btn-group">
+          <button class="choice-btn selected" id="roleBoardBtn">🖥️ The Board</button>
+          <button class="choice-btn" id="roleSpymasterBtn">🕵️ A Spymaster</button>
         </div>
       </div>
 
-      <div class="field">
-        <label>Which team goes first?</label>
-        <div class="btn-group" id="startTeamGroup">
-          <button class="choice-btn team-red" data-team="red">Red</button>
-          <button class="choice-btn team-blue" data-team="blue">Blue</button>
-          <button class="choice-btn" data-team="random">Random</button>
+      <!-- ---- Board setup ---- -->
+      <div id="boardSetupPanel">
+        <div class="field">
+          <label>Language</label>
+          <div class="btn-group" id="langGroup">
+            <button class="choice-btn" data-lang="en">English</button>
+            <button class="choice-btn" data-lang="es">Español</button>
+            <button class="choice-btn" data-lang="fr">Français</button>
+            <button class="choice-btn" data-lang="hi">Hindi (Roman)</button>
+          </div>
         </div>
+
+        <div class="field">
+          <label>Which team goes first?</label>
+          <div class="btn-group" id="startTeamGroup">
+            <button class="choice-btn team-red" data-team="red">Red</button>
+            <button class="choice-btn team-blue" data-team="blue">Blue</button>
+            <button class="choice-btn" data-team="random">Random</button>
+          </div>
+        </div>
+
+        <button class="primary-btn" id="startGameBtn">Start Game</button>
       </div>
 
-      <button class="primary-btn" id="startGameBtn">Start Game</button>
+      <!-- ---- Spymaster join ---- -->
+      <div id="spymasterSetupPanel" class="hidden">
+        <p class="hint-text" style="margin-top:0;">Ask whoever set up "The Board" for the game code shown on their screen, then enter it below to see the key privately on your own phone.</p>
+        <div class="field">
+          <label>Game Code</label>
+          <input type="text" id="spymasterCodeInput" class="code-input" placeholder="e.g. HR-048291" maxlength="12">
+          <div class="error-text" id="spymasterCodeError"></div>
+        </div>
+        <button class="primary-btn" id="viewKeyBtn">View Key</button>
+      </div>
 
       <div class="rules-toggle"><a id="rulesToggle">How to play / rules</a></div>
       <div class="rules-box hidden" id="rulesBox">
-        <h3>How to play (in person, same table)</h3>
+        <h3>How to play (everyone in the same room)</h3>
         <ul>
           <li>Split into two teams: Red and Blue. Each team picks one <b>Spymaster</b>; everyone else is a <b>Guesser</b>.</li>
-          <li>This device is shared. Set it in the middle so guessers can see the board.</li>
-          <li>At the start of each turn, <b>only the spymasters</b> should look at the screen while one of them taps <b>"Reveal Key (Spymasters Only)"</b> to see which words belong to which team. Guessers should look away.</li>
-          <li>The spymaster gives a one-word clue plus a number, e.g. "OCEAN — 2", meaning two words on the board relate to "ocean". Type it into the clue box so everyone can see it, or just say it out loud.</li>
-          <li>Guessers tap words they think match the clue. Tap "Hide Key" first so nobody accidentally sees the answers!</li>
-          <li>Guessing your own team's color lets you keep guessing. Guessing neutral (tan) or the other team's color ends your turn. Guessing the black <b>Assassin</b> card loses the game instantly for your team.</li>
+          <li>One phone is "The Board" — set it in the middle of the table so all the guessers can see the word grid. Whoever set it up picks the language and taps Start Game.</li>
+          <li>The Board screen shows a short <b>Game Code</b>. Each Spymaster opens this same page on their <b>own phone</b>, chooses "A Spymaster", types in that code, and privately sees which words belong to which team — no need to hide anything from guessers, and no internet connection required to sync.</li>
+          <li>The spymaster gives a one-word clue plus a number, e.g. "OCEAN — 2". Say it out loud, or type it into the Board's clue box so everyone can see it.</li>
+          <li>Guessers tap words on the Board they think match the clue. Guessing your own team's color lets you keep guessing. Guessing neutral (tan) or the other team's color ends your turn. Guessing the black <b>Assassin</b> card loses the game instantly for your team.</li>
           <li>First team to reveal all of their own words wins.</li>
+          <li>Only one phone? The Board also has a "Reveal Key" button as a fallback — spymasters huddle around it while guessers look away, then hide it again.</li>
         </ul>
       </div>
     </div>
@@ -317,6 +372,10 @@
       </div>
     </div>
 
+    <div class="code-banner">
+      Game Code (spymasters, enter this on your own phone): <span class="code-value" id="gameCodeDisplay">--</span>
+    </div>
+
     <div class="turn-banner" id="turnBanner">RED TEAM'S TURN</div>
 
     <div class="clue-bar">
@@ -327,7 +386,7 @@
     <div class="clue-log" id="clueLog"></div>
 
     <div class="toolbar">
-      <button class="secondary-btn" id="spymasterToggleBtn">🔑 Reveal Key (Spymasters Only)</button>
+      <button class="secondary-btn" id="spymasterToggleBtn">🔑 Reveal Key (fallback, this device)</button>
       <button class="secondary-btn" id="endTurnBtn">End Turn →</button>
       <button class="secondary-btn danger-btn" id="newGameBtn">New Board</button>
     </div>
@@ -337,6 +396,21 @@
     </div>
 
     <div id="board"></div>
+  </div>
+
+  <!-- ============ SPYMASTER KEY SCREEN (private, on a spymaster's own phone) ============ -->
+  <div id="spymasterKeyScreen" class="hidden">
+    <div class="spymaster-banner">🔑 PRIVATE KEY — don't let guessers see this screen</div>
+    <div class="code-banner">
+      Code: <span class="code-value" id="keyScreenCode">--</span> &middot; <span id="keyScreenInfo"></span>
+    </div>
+    <div class="legend" id="keyLegend"></div>
+    <p class="hint-text">Tap a word here to cross it off once it's been guessed on the Board — just for your own reference, it won't affect the real board.</p>
+    <div id="spymasterBoard"></div>
+    <div class="toolbar">
+      <button class="secondary-btn" id="clearMarksBtn">Clear Marks</button>
+      <button class="secondary-btn danger-btn" id="keyBackBtn">← Back</button>
+    </div>
   </div>
 
   <footer>Fully offline &middot; nothing leaves this device</footer>
@@ -523,49 +597,78 @@ let state = {
   currentTeam: 'red',
   remaining: { red: 9, blue: 8 },
   gameOver: false,
-  spymasterMode: false
+  spymasterMode: false,
+  gameCode: ''
 };
 
-function getUsedWords(lang) {
-  try {
-    return JSON.parse(localStorage.getItem('cn_used_' + lang) || '[]');
-  } catch (e) { return []; }
+/* ---------- Seeded RNG so a Board device and a Spymaster device can
+   independently rebuild the exact identical board from a shared short
+   code, with no networking involved. ---------- */
+function xmur3(str) {
+  let h = 1779033703 ^ str.length;
+  for (let i = 0; i < str.length; i++) {
+    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  return function () {
+    h = Math.imul(h ^ (h >>> 16), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    h ^= h >>> 16;
+    return h >>> 0;
+  };
 }
-function setUsedWords(lang, arr) {
-  localStorage.setItem('cn_used_' + lang, JSON.stringify(arr));
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function makeRng(seedStr) {
+  return mulberry32(xmur3(seedStr)());
 }
 
-function shuffle(arr) {
+function shuffle(arr, rng) {
+  const rand = rng || Math.random;
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rand() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
 }
 
-function pickWords(lang, count) {
-  const all = WORDS[lang];
-  let used = getUsedWords(lang);
-  let available = all.filter(w => !used.includes(w));
-  if (available.length < count) {
-    used = [];
-    available = all.slice();
-  }
-  const picked = shuffle(available).slice(0, count);
-  setUsedWords(lang, used.concat(picked));
-  return picked;
+const LANG_LETTER = { en: 'E', es: 'S', fr: 'F', hi: 'H' };
+const LETTER_LANG = { E: 'en', S: 'es', F: 'fr', H: 'hi' };
+
+function generateGameCode(lang, startingTeam) {
+  const seedDigits = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+  return LANG_LETTER[lang] + (startingTeam === 'red' ? 'R' : 'B') + seedDigits;
+}
+function formatGameCode(code) {
+  return code.slice(0, 2) + '-' + code.slice(2);
+}
+function parseGameCode(raw) {
+  const code = (raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (code.length !== 8) return null;
+  const language = LETTER_LANG[code[0]];
+  const startingTeam = code[1] === 'R' ? 'red' : (code[1] === 'B' ? 'blue' : null);
+  const seed = code.slice(2);
+  if (!language || !startingTeam || !/^\d{6}$/.test(seed)) return null;
+  return { language, startingTeam, seed, code };
 }
 
-function buildBoard(startingTeam) {
-  const words = pickWords(state.language, 25);
-  const counts = { [startingTeam]: 9, [startingTeam === 'red' ? 'blue' : 'red']: 8 };
+function buildBoardFromCode(language, startingTeam, seed) {
+  const rng = makeRng(language + '|' + startingTeam + '|' + seed);
+  const words = shuffle(WORDS[language], rng).slice(0, 25);
+  const otherTeam = startingTeam === 'red' ? 'blue' : 'red';
   const types = [];
-  for (let i = 0; i < counts.red; i++) types.push('red');
-  for (let i = 0; i < counts.blue; i++) types.push('blue');
+  for (let i = 0; i < 9; i++) types.push(startingTeam);
+  for (let i = 0; i < 8; i++) types.push(otherTeam);
   for (let i = 0; i < 7; i++) types.push('neutral');
   types.push('assassin');
-  const shuffledTypes = shuffle(types);
+  const shuffledTypes = shuffle(types, rng);
   return words.map((w, i) => ({ word: w, type: shuffledTypes[i], revealed: false }));
 }
 
@@ -593,6 +696,19 @@ document.getElementById('rulesToggle').addEventListener('click', () => {
   document.getElementById('rulesBox').classList.toggle('hidden');
 });
 
+document.getElementById('roleBoardBtn').addEventListener('click', () => {
+  document.getElementById('roleBoardBtn').classList.add('selected');
+  document.getElementById('roleSpymasterBtn').classList.remove('selected');
+  document.getElementById('boardSetupPanel').classList.remove('hidden');
+  document.getElementById('spymasterSetupPanel').classList.add('hidden');
+});
+document.getElementById('roleSpymasterBtn').addEventListener('click', () => {
+  document.getElementById('roleSpymasterBtn').classList.add('selected');
+  document.getElementById('roleBoardBtn').classList.remove('selected');
+  document.getElementById('spymasterSetupPanel').classList.remove('hidden');
+  document.getElementById('boardSetupPanel').classList.add('hidden');
+});
+
 document.getElementById('startGameBtn').addEventListener('click', () => {
   state.language = pendingLang;
   state.startPref = pendingStart;
@@ -601,6 +717,20 @@ document.getElementById('startGameBtn').addEventListener('click', () => {
   startNewGame();
   document.getElementById('setupScreen').classList.add('hidden');
   document.getElementById('gameScreen').classList.remove('hidden');
+});
+
+document.getElementById('viewKeyBtn').addEventListener('click', () => {
+  const input = document.getElementById('spymasterCodeInput');
+  const errorEl = document.getElementById('spymasterCodeError');
+  const parsed = parseGameCode(input.value);
+  if (!parsed) {
+    errorEl.textContent = "That code doesn't look right. Double check it with the Board.";
+    return;
+  }
+  errorEl.textContent = '';
+  showConfirm('This will show the secret key on this screen. Make sure only Spymasters are looking.', () => {
+    openSpymasterKeyScreen(parsed);
+  });
 });
 
 /* =========================================================================
@@ -613,7 +743,10 @@ function resolveStartingTeam() {
 
 function startNewGame() {
   const startingTeam = resolveStartingTeam();
-  state.board = buildBoard(startingTeam);
+  const code = generateGameCode(state.language, startingTeam);
+  const parsed = parseGameCode(code);
+  state.gameCode = code;
+  state.board = buildBoardFromCode(parsed.language, parsed.startingTeam, parsed.seed);
   state.currentTeam = startingTeam;
   state.remaining = {
     red: state.board.filter(c => c.type === 'red').length,
@@ -626,6 +759,7 @@ function startNewGame() {
   document.getElementById('clueLog').textContent = '';
   document.getElementById('spymasterBannerWrap').classList.add('hidden');
   document.getElementById('board').classList.remove('spymaster-mode');
+  document.getElementById('gameCodeDisplay').textContent = formatGameCode(state.gameCode);
   renderBoard();
   updateTopbar();
 }
@@ -726,26 +860,40 @@ document.getElementById('submitClueBtn').addEventListener('click', () => {
     teamLabel + "'s clue: <b>" + word.toUpperCase() + '</b>' + (num !== '' ? ' — ' + num : '');
 });
 
-/* Spymaster reveal with confirmation */
+/* Generic confirm overlay, reused by the Board's local fallback reveal
+   and by the Spymaster View join flow. */
+let pendingConfirmAction = null;
+function showConfirm(message, onConfirm) {
+  document.querySelector('#confirmOverlay .modal p').textContent = message;
+  pendingConfirmAction = onConfirm;
+  document.getElementById('confirmOverlay').classList.remove('hidden');
+}
+document.getElementById('confirmCancel').addEventListener('click', () => {
+  pendingConfirmAction = null;
+  document.getElementById('confirmOverlay').classList.add('hidden');
+});
+document.getElementById('confirmShow').addEventListener('click', () => {
+  document.getElementById('confirmOverlay').classList.add('hidden');
+  const action = pendingConfirmAction;
+  pendingConfirmAction = null;
+  if (action) action();
+});
+
+/* Spymaster reveal fallback (single shared device, no second phone) */
 document.getElementById('spymasterToggleBtn').addEventListener('click', () => {
   if (state.spymasterMode) {
     state.spymasterMode = false;
     document.getElementById('board').classList.remove('spymaster-mode');
     document.getElementById('spymasterBannerWrap').classList.add('hidden');
-    document.getElementById('spymasterToggleBtn').textContent = '🔑 Reveal Key (Spymasters Only)';
+    document.getElementById('spymasterToggleBtn').textContent = '🔑 Reveal Key (fallback, this device)';
   } else {
-    document.getElementById('confirmOverlay').classList.remove('hidden');
+    showConfirm('Make sure only the Spymasters are looking at the screen right now.', () => {
+      state.spymasterMode = true;
+      document.getElementById('board').classList.add('spymaster-mode');
+      document.getElementById('spymasterBannerWrap').classList.remove('hidden');
+      document.getElementById('spymasterToggleBtn').textContent = '🙈 Hide Key';
+    });
   }
-});
-document.getElementById('confirmCancel').addEventListener('click', () => {
-  document.getElementById('confirmOverlay').classList.add('hidden');
-});
-document.getElementById('confirmShow').addEventListener('click', () => {
-  document.getElementById('confirmOverlay').classList.add('hidden');
-  state.spymasterMode = true;
-  document.getElementById('board').classList.add('spymaster-mode');
-  document.getElementById('spymasterBannerWrap').classList.remove('hidden');
-  document.getElementById('spymasterToggleBtn').textContent = '🙈 Hide Key';
 });
 
 /* Win overlay actions */
@@ -811,6 +959,58 @@ function openSettingsOverlay() {
 document.getElementById('settingsBtn').addEventListener('click', openSettingsOverlay);
 document.getElementById('settingsCancel').addEventListener('click', () => {
   document.getElementById('settingsOverlay').classList.add('hidden');
+});
+
+/* =========================================================================
+   SPYMASTER KEY SCREEN (private, on a spymaster's own phone — joined via
+   the game code shown on the Board device. No network involved: both
+   devices independently rebuild the identical board from the same seed.)
+   ========================================================================= */
+let keyScreenMarks = new Set();
+
+function openSpymasterKeyScreen(parsed) {
+  const board = buildBoardFromCode(parsed.language, parsed.startingTeam, parsed.seed);
+  keyScreenMarks = new Set();
+
+  document.getElementById('keyScreenCode').textContent = formatGameCode(parsed.code);
+  document.getElementById('keyScreenInfo').textContent =
+    LANG_NAMES[parsed.language] + ' · ' + (parsed.startingTeam === 'red' ? 'Red' : 'Blue') + ' goes first';
+
+  const redCount = parsed.startingTeam === 'red' ? 9 : 8;
+  const blueCount = parsed.startingTeam === 'blue' ? 9 : 8;
+  document.getElementById('keyLegend').innerHTML =
+    '<span><span class="dot" style="background:var(--red)"></span>Red (' + redCount + ')</span>' +
+    '<span><span class="dot" style="background:var(--blue)"></span>Blue (' + blueCount + ')</span>' +
+    '<span><span class="dot" style="background:var(--neutral-dark)"></span>Neutral (7)</span>' +
+    '<span><span class="dot" style="background:#000"></span>Assassin (1)</span>';
+
+  const boardEl = document.getElementById('spymasterBoard');
+  boardEl.innerHTML = '';
+  board.forEach((cell, idx) => {
+    const div = document.createElement('div');
+    div.className = 'word-card revealed ' + cell.type;
+    div.textContent = cell.word;
+    div.addEventListener('click', () => {
+      if (keyScreenMarks.has(idx)) keyScreenMarks.delete(idx); else keyScreenMarks.add(idx);
+      div.classList.toggle('marked', keyScreenMarks.has(idx));
+    });
+    boardEl.appendChild(div);
+  });
+
+  document.getElementById('setupScreen').classList.add('hidden');
+  document.getElementById('gameScreen').classList.add('hidden');
+  document.getElementById('spymasterKeyScreen').classList.remove('hidden');
+}
+
+document.getElementById('clearMarksBtn').addEventListener('click', () => {
+  keyScreenMarks = new Set();
+  document.querySelectorAll('#spymasterBoard .word-card').forEach(el => el.classList.remove('marked'));
+});
+
+document.getElementById('keyBackBtn').addEventListener('click', () => {
+  document.getElementById('spymasterKeyScreen').classList.add('hidden');
+  document.getElementById('setupScreen').classList.remove('hidden');
+  document.getElementById('spymasterCodeInput').value = '';
 });
 </script>
 </body>

@@ -1,24 +1,26 @@
 # Codenames — Offline
 
-A single-file, offline party game for playing Codenames in person with friends. No internet connection, server, or install required.
+A single-file, offline party game for playing Codenames in person with friends, using everyone's own phones. No internet connection, server, or install required.
 
 ## How to run it
 
-Just open `index.html` in any web browser (double-click it, or drag it into a browser tab). Everything — code, styling, and word lists — is contained in that one file, so it works from a phone, tablet, or laptop with no network at all.
+Just open `index.html` in any web browser (double-click it, or drag it into a browser tab). Everything — code, styling, and word lists — is contained in that one file, so it works on a phone, tablet, or laptop with no network at all. Everyone opens the same `index.html` file on their own device.
 
-If you'd rather host it (e.g. GitHub Pages, or a local server so multiple devices on the same Wi-Fi can each open it), any static file host works — there's no backend.
+If you'd rather host it (e.g. GitHub Pages, or a local server so it's one link to open instead of sharing a file), any static file host works — there's no backend.
 
 ## How to play
 
-1. Gather everyone around one shared screen (a tablet or laptop works well).
-2. Split into a Red team and a Blue team. Each team picks one **Spymaster**; everyone else is a **Guesser**.
-3. Pick a language (English, Spanish, French, or Hindi — romanized in English letters, no Devanagari) and who goes first, then tap **Start Game**.
-4. At the start of a turn, both spymasters look at the screen and tap **Reveal Key (Spymasters Only)** — guessers should look away. Tap **Hide Key** before guessers look back.
-5. The spymaster gives a one-word clue plus a number (type it into the clue box, or just say it aloud).
-6. Guessers tap words on the board. Your own team's color keeps your turn going; the other team's color, a neutral (tan) word, or ending manually with **End Turn** passes the turn. The black **Assassin** card ends the game instantly for whoever taps it.
-7. First team to reveal all of their words wins.
+1. Split into a Red team and a Blue team. Each team picks one **Spymaster**; everyone else is a **Guesser**.
+2. One phone becomes **"The Board"** — set it in the middle of the table so all the guessers can see the word grid. Whoever set it up picks a language (English, Spanish, French, or Hindi — romanized in English letters, no Devanagari) and who goes first, then taps **Start Game**.
+3. The Board shows a short **Game Code** (like `HR-048291`). Each Spymaster opens `index.html` on their **own phone**, chooses **"A Spymaster"**, types in that code, and privately sees the color key for every word — no need to hide anything from guessers, and it works with zero internet connection because both devices deterministically rebuild the identical board from that one code.
+4. The spymaster gives a one-word clue plus a number (say it aloud, or type it into the Board's clue box).
+5. Guessers tap words on the Board. Your own team's color keeps your turn going; the other team's color, a neutral (tan) word, or manually tapping **End Turn** passes the turn. The black **Assassin** card ends the game instantly for whoever taps it.
+6. First team to reveal all of their words wins.
+
+Only have one phone total? The Board also has a **Reveal Key (fallback, this device)** button — spymasters huddle around it while guessers look away, then hide it again before guessing resumes.
 
 ## Notes
 
-- Word usage is tracked per language in the browser's local storage so repeat boards feel fresher across games on the same device; it resets automatically once the word pool for a language is exhausted.
-- Since it's a single shared screen, anyone looking at the board during "Reveal Key" mode can see the answers — that's just an inherent limit of a single-device pass-and-play design.
+- The game code encodes the language, starting team, and a random seed — nothing else is transmitted or stored anywhere; both devices just run the same shuffle algorithm from that seed.
+- A spymaster's key screen lets them tap a word to cross it off once it's been guessed, purely as a personal memory aid — it's local to their phone and doesn't affect the real board.
+- Starting a new board always generates a fresh code, so spymasters need to re-enter it each round.
