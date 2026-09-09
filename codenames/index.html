@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Codenames — Offline</title>
+<style>
+  :root {
+    --bg: #14171c;
+    --panel: #1c2028;
+    --panel-light: #262b35;
+    --text: #f2f2f2;
+    --muted: #9aa1ac;
+    --red: #c0392b;
+    --red-dark: #8e2c20;
+    --blue: #2266b8;
+    --blue-dark: #184a85;
+    --neutral: #c9b48a;
+    --neutral-dark: #b39d6f;
+    --assassin: #16171a;
+    --accent: #e0b64a;
+    --border-radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+  }
+  #app { max-width: 1100px; margin: 0 auto; padding: 12px 12px 60px; }
+
+  h1 { text-align: center; margin: 10px 0 4px; letter-spacing: 2px; font-size: 1.8rem; }
+  .subtitle { text-align: center; color: var(--muted); margin-bottom: 18px; font-size: 0.9rem; }
+
+  .hidden { display: none !important; }
+
+  /* ---------- Setup screen ---------- */
+  .card-panel {
+    background: var(--panel);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+  .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+  .choice-btn {
+    flex: 1 1 auto;
+    min-width: 90px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 2px solid var(--panel-light);
+    background: var(--panel-light);
+    color: var(--text);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all .15s ease;
+  }
+  .choice-btn:hover { border-color: var(--accent); }
+  .choice-btn.selected {
+    border-color: var(--accent);
+    background: #3a3320;
+    font-weight: 600;
+  }
+  .choice-btn.team-red.selected { background: var(--red); border-color: var(--red); }
+  .choice-btn.team-blue.selected { background: var(--blue); border-color: var(--blue); }
+
+  .primary-btn {
+    display: block;
+    width: 100%;
+    padding: 16px;
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    border: none;
+    border-radius: 12px;
+    background: var(--accent);
+    color: #221a00;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  .primary-btn:hover { filter: brightness(1.08); }
+  .secondary-btn {
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: 2px solid var(--panel-light);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 0.95rem;
+  }
+  .secondary-btn:hover { border-color: var(--accent); }
+  .danger-btn { border-color: var(--red); color: #ffb3a7; }
+  .danger-btn:hover { background: var(--red); color: white; }
+
+  .rules-toggle { text-align: center; margin-top: 8px; }
+  .rules-toggle a { color: var(--muted); font-size: 0.85rem; cursor: pointer; text-decoration: underline; }
+  .rules-box {
+    background: var(--panel-light);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-top: 10px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+  .rules-box h3 { color: var(--text); margin-top: 0; }
+  .rules-box ul { padding-left: 18px; }
+
+  /* ---------- Game top bar ---------- */
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .score-pill {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .score-box {
+    padding: 8px 16px;
+    border-radius: 30px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    min-width: 54px;
+    text-align: center;
+  }
+  .score-box.red { background: var(--red); }
+  .score-box.blue { background: var(--blue); }
+
+  .turn-banner {
+    text-align: center;
+    padding: 10px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 1.2rem;
+    letter-spacing: 1px;
+    margin-bottom: 14px;
+  }
+  .turn-banner.red { background: var(--red-dark); }
+  .turn-banner.blue { background: var(--blue-dark); }
+
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 14px; }
+
+  .clue-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .clue-bar input[type=text], .clue-bar input[type=number] {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 2px solid var(--panel-light);
+    background: var(--panel);
+    color: var(--text);
+    font-size: 1rem;
+  }
+  .clue-bar input[type=text] { flex: 2; min-width: 140px; }
+  .clue-bar input[type=number] { flex: 0 0 70px; width: 70px; }
+  .clue-log {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-bottom: 10px;
+    min-height: 1.3em;
+  }
+  .clue-log b { color: var(--accent); }
+
+  /* ---------- Board ---------- */
+  #board {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+  }
+  .word-card {
+    position: relative;
+    aspect-ratio: 3 / 2;
+    background: #eae6da;
+    color: #222;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 6px;
+    font-weight: 700;
+    font-size: clamp(0.65rem, 2.2vw, 1rem);
+    cursor: pointer;
+    user-select: none;
+    border: 3px solid transparent;
+    transition: transform .1s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    word-break: break-word;
+  }
+  .word-card:active { transform: scale(0.96); }
+
+  .word-card.revealed { cursor: default; color: #fff; }
+  .word-card.revealed.red { background: var(--red); }
+  .word-card.revealed.blue { background: var(--blue); }
+  .word-card.revealed.neutral { background: var(--neutral-dark); color: #2a2416; }
+  .word-card.revealed.assassin { background: var(--assassin); color: #eee; }
+  .word-card.revealed::after {
+    content: "";
+  }
+
+  /* Spymaster key overlay coloring (only visible in spymaster mode, before reveal) */
+  #board.spymaster-mode .word-card:not(.revealed).key-red { border-color: var(--red); box-shadow: inset 0 0 0 100px rgba(192,57,43,0.35); }
+  #board.spymaster-mode .word-card:not(.revealed).key-blue { border-color: var(--blue); box-shadow: inset 0 0 0 100px rgba(34,102,184,0.35); }
+  #board.spymaster-mode .word-card:not(.revealed).key-neutral { border-color: var(--neutral-dark); box-shadow: inset 0 0 0 100px rgba(179,157,111,0.35); }
+  #board.spymaster-mode .word-card:not(.revealed).key-assassin { border-color: #000; box-shadow: inset 0 0 0 100px rgba(0,0,0,0.55); color: #fff; }
+
+  .spymaster-banner {
+    text-align: center;
+    background: var(--accent);
+    color: #221a00;
+    font-weight: 700;
+    padding: 10px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    letter-spacing: 1px;
+  }
+
+  /* ---------- Overlay / Modal ---------- */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.72);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 50;
+    padding: 20px;
+  }
+  .modal {
+    background: var(--panel);
+    border-radius: 14px;
+    padding: 24px;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+  }
+  .modal h2 { margin-top: 0; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .modal-actions button { flex: 1; }
+
+  .win-modal .win-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 6px; }
+  .win-modal.red-win { border: 3px solid var(--red); }
+  .win-modal.blue-win { border: 3px solid var(--blue); }
+
+  footer { text-align: center; color: var(--muted); font-size: 0.75rem; margin-top: 30px; }
+
+  @media (max-width: 480px) {
+    h1 { font-size: 1.4rem; }
+    .score-box { font-size: 0.95rem; padding: 6px 12px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>CODENAMES</h1>
+  <div class="subtitle">Offline party word game &middot; pass-and-play &middot; no internet needed</div>
+
+  <!-- ============ SETUP SCREEN ============ -->
+  <div id="setupScreen">
+    <div class="card-panel">
+      <div class="field">
+        <label>Language</label>
+        <div class="btn-group" id="langGroup">
+          <button class="choice-btn" data-lang="en">English</button>
+          <button class="choice-btn" data-lang="es">Español</button>
+          <button class="choice-btn" data-lang="fr">Français</button>
+          <button class="choice-btn" data-lang="hi">Hindi (Roman)</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Which team goes first?</label>
+        <div class="btn-group" id="startTeamGroup">
+          <button class="choice-btn team-red" data-team="red">Red</button>
+          <button class="choice-btn team-blue" data-team="blue">Blue</button>
+          <button class="choice-btn" data-team="random">Random</button>
+        </div>
+      </div>
+
+      <button class="primary-btn" id="startGameBtn">Start Game</button>
+
+      <div class="rules-toggle"><a id="rulesToggle">How to play / rules</a></div>
+      <div class="rules-box hidden" id="rulesBox">
+        <h3>How to play (in person, same table)</h3>
+        <ul>
+          <li>Split into two teams: Red and Blue. Each team picks one <b>Spymaster</b>; everyone else is a <b>Guesser</b>.</li>
+          <li>This device is shared. Set it in the middle so guessers can see the board.</li>
+          <li>At the start of each turn, <b>only the spymasters</b> should look at the screen while one of them taps <b>"Reveal Key (Spymasters Only)"</b> to see which words belong to which team. Guessers should look away.</li>
+          <li>The spymaster gives a one-word clue plus a number, e.g. "OCEAN — 2", meaning two words on the board relate to "ocean". Type it into the clue box so everyone can see it, or just say it out loud.</li>
+          <li>Guessers tap words they think match the clue. Tap "Hide Key" first so nobody accidentally sees the answers!</li>
+          <li>Guessing your own team's color lets you keep guessing. Guessing neutral (tan) or the other team's color ends your turn. Guessing the black <b>Assassin</b> card loses the game instantly for your team.</li>
+          <li>First team to reveal all of their own words wins.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ GAME SCREEN ============ -->
+  <div id="gameScreen" class="hidden">
+    <div class="topbar">
+      <div class="score-pill">
+        <div class="score-box red" id="redScore">9</div>
+        <div class="score-box blue" id="blueScore">8</div>
+      </div>
+      <div>
+        <button class="secondary-btn" id="settingsBtn">⚙ Settings</button>
+      </div>
+    </div>
+
+    <div class="turn-banner" id="turnBanner">RED TEAM'S TURN</div>
+
+    <div class="clue-bar">
+      <input type="text" id="clueWord" placeholder="Clue word" maxlength="30">
+      <input type="number" id="clueNumber" placeholder="#" min="0" max="9">
+      <button class="secondary-btn" id="submitClueBtn">Show Clue</button>
+    </div>
+    <div class="clue-log" id="clueLog"></div>
+
+    <div class="toolbar">
+      <button class="secondary-btn" id="spymasterToggleBtn">🔑 Reveal Key (Spymasters Only)</button>
+      <button class="secondary-btn" id="endTurnBtn">End Turn →</button>
+      <button class="secondary-btn danger-btn" id="newGameBtn">New Board</button>
+    </div>
+
+    <div id="spymasterBannerWrap" class="hidden">
+      <div class="spymaster-banner">🔑 SPYMASTER KEY VISIBLE — Guessers look away!</div>
+    </div>
+
+    <div id="board"></div>
+  </div>
+
+  <footer>Fully offline &middot; nothing leaves this device</footer>
+</div>
+
+<!-- Confirm before showing key -->
+<div class="overlay hidden" id="confirmOverlay">
+  <div class="modal">
+    <h2>Show the key?</h2>
+    <p>Make sure only the Spymasters are looking at the screen right now.</p>
+    <div class="modal-actions">
+      <button class="secondary-btn" id="confirmCancel">Cancel</button>
+      <button class="primary-btn" id="confirmShow">Yes, show it</button>
+    </div>
+  </div>
+</div>
+
+<!-- Win overlay -->
+<div class="overlay hidden" id="winOverlay">
+  <div class="modal win-modal" id="winModal">
+    <div class="win-title" id="winTitle">RED TEAM WINS!</div>
+    <p id="winSubtitle"></p>
+    <div class="modal-actions">
+      <button class="secondary-btn" id="winSettingsBtn">Change Settings</button>
+      <button class="primary-btn" id="winNewGameBtn">Play Again</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings overlay (mid-game) -->
+<div class="overlay hidden" id="settingsOverlay">
+  <div class="modal">
+    <h2>Settings</h2>
+    <p style="color:var(--muted); font-size:0.9rem;">Changing settings will end the current board.</p>
+    <div class="field" style="text-align:left;">
+      <label>Language</label>
+      <div class="btn-group" id="langGroup2"></div>
+    </div>
+    <div class="field" style="text-align:left;">
+      <label>Which team goes first?</label>
+      <div class="btn-group" id="startTeamGroup2"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="secondary-btn" id="settingsCancel">Cancel</button>
+      <button class="primary-btn" id="settingsApply">Apply &amp; New Board</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   WORD LISTS — parallel arrays, same index = same concept across languages.
+   Hindi is romanized (English letters), no Devanagari script.
+   ========================================================================= */
+const WORDS = {
+en: [
+// Animals
+"DOG","CAT","LION","TIGER","BEAR","ELEPHANT","HORSE","FISH","BIRD","SNAKE",
+"RABBIT","MOUSE","WOLF","FOX","DEER","SHEEP","GOAT","COW","PIG","MONKEY",
+"EAGLE","OWL","SHARK","WHALE","DOLPHIN","FROG","DUCK","CHICKEN","BEE","ANT",
+"SPIDER","BUTTERFLY","CAMEL","ZEBRA","GIRAFFE","KANGAROO","PENGUIN","TURTLE","CROCODILE","PARROT",
+// Nature
+"SUN","MOON","STAR","SKY","CLOUD","RAIN","SNOW","WIND","FIRE","WATER",
+"EARTH","MOUNTAIN","RIVER","OCEAN","LAKE","FOREST","TREE","FLOWER","GRASS","DESERT",
+"ISLAND","BEACH","VOLCANO","STORM","RAINBOW","ROCK","SAND","ICE",
+// Objects
+"TABLE","CHAIR","DOOR","WINDOW","BED","LAMP","BOOK","PEN","PAPER","KEY",
+"CLOCK","MIRROR","PHONE","COMPUTER","CAMERA","KNIFE","FORK","SPOON","PLATE","CUP",
+"BOTTLE","BAG","BOX","BALL","SHOE","HAT","SHIRT","RING","NECKLACE","UMBRELLA",
+"CANDLE","MAP","LADDER","ROPE","HAMMER","NAIL",
+// Places
+"HOUSE","SCHOOL","HOSPITAL","TEMPLE","MARKET","PARK","CITY","VILLAGE","BRIDGE","ROAD",
+"AIRPORT","HOTEL","RESTAURANT","LIBRARY","MUSEUM","FARM","GARDEN","KITCHEN","TOWER","CASTLE",
+"PALACE","PRISON","BANK",
+// Food
+"BREAD","RICE","MILK","EGG","CHEESE","BUTTER","SUGAR","SALT","HONEY","APPLE",
+"BANANA","ORANGE","MANGO","GRAPE","LEMON","POTATO","TOMATO","ONION","GARLIC","MEAT",
+"CAKE","CHOCOLATE","COFFEE","TEA","SOUP",
+// Body
+"HEAD","EYE","EAR","NOSE","MOUTH","HAND","FOOT","LEG","ARM","HEART",
+"HAIR","TOOTH","FINGER",
+// Transport
+"CAR","TRAIN","PLANE","SHIP","BOAT","BUS","BICYCLE","TRUCK","MOTORCYCLE","HELICOPTER","ROCKET",
+// People
+"DOCTOR","TEACHER","POLICE","SOLDIER","FARMER","ARTIST","SINGER","DANCER","KING","QUEEN",
+"PRINCE","PRINCESS","FRIEND","FAMILY","CHILD","BABY","STUDENT","CHEF","PILOT","WRITER",
+// Abstract
+"LOVE","PEACE","WAR","MUSIC","DANCE","GAME","FOOTBALL","CRICKET","TENNIS","MONEY",
+"GOLD","PLATINUM","DIAMOND","TIME","DREAM","LIGHT","SHADOW","COLOR","SOUND","VOICE",
+"NUMBER","LETTER","WORD","STORY","SECRET","MAGIC","GHOST","ANGEL","DRAGON","ROBOT","ALIEN"
+],
+es: [
+"PERRO","GATO","LEON","TIGRE","OSO","ELEFANTE","CABALLO","PEZ","PAJARO","SERPIENTE",
+"CONEJO","RATON","LOBO","ZORRO","CIERVO","OVEJA","CABRA","VACA","CERDO","MONO",
+"AGUILA","BUHO","TIBURON","BALLENA","DELFIN","RANA","PATO","POLLO","ABEJA","HORMIGA",
+"ARANA","MARIPOSA","CAMELLO","CEBRA","JIRAFA","CANGURO","PINGUINO","TORTUGA","COCODRILO","LORO",
+"SOL","LUNA","ESTRELLA","CIELO","NUBE","LLUVIA","NIEVE","VIENTO","FUEGO","AGUA",
+"TIERRA","MONTANA","RIO","OCEANO","LAGO","BOSQUE","ARBOL","FLOR","HIERBA","DESIERTO",
+"ISLA","PLAYA","VOLCAN","TORMENTA","ARCOIRIS","ROCA","ARENA","HIELO",
+"MESA","SILLA","PUERTA","VENTANA","CAMA","LAMPARA","LIBRO","BOLIGRAFO","PAPEL","LLAVE",
+"RELOJ","ESPEJO","TELEFONO","COMPUTADORA","CAMARA","CUCHILLO","TENEDOR","CUCHARA","PLATO","TAZA",
+"BOTELLA","BOLSA","CAJA","PELOTA","ZAPATO","SOMBRERO","CAMISA","ANILLO","COLLAR","PARAGUAS",
+"VELA","MAPA","ESCALERA","CUERDA","MARTILLO","CLAVO",
+"CASA","ESCUELA","HOSPITAL","TEMPLO","MERCADO","PARQUE","CIUDAD","PUEBLO","PUENTE","CAMINO",
+"AEROPUERTO","HOTEL","RESTAURANTE","BIBLIOTECA","MUSEO","GRANJA","JARDIN","COCINA","TORRE","CASTILLO",
+"PALACIO","PRISION","BANCO",
+"PAN","ARROZ","LECHE","HUEVO","QUESO","MANTEQUILLA","AZUCAR","SAL","MIEL","MANZANA",
+"PLATANO","NARANJA","MANGO","UVA","LIMON","PATATA","TOMATE","CEBOLLA","AJO","CARNE",
+"PASTEL","CHOCOLATE","CAFE","TE","SOPA",
+"CABEZA","OJO","OREJA","NARIZ","BOCA","MANO","PIE","PIERNA","BRAZO","CORAZON",
+"CABELLO","DIENTE","DEDO",
+"COCHE","TREN","AVION","BARCO","LANCHA","AUTOBUS","BICICLETA","CAMION","MOTOCICLETA","HELICOPTERO","COHETE",
+"DOCTOR","PROFESOR","POLICIA","SOLDADO","GRANJERO","ARTISTA","CANTANTE","BAILARIN","REY","REINA",
+"PRINCIPE","PRINCESA","AMIGO","FAMILIA","NINO","BEBE","ESTUDIANTE","CHEF","PILOTO","ESCRITOR",
+"AMOR","PAZ","GUERRA","MUSICA","BAILE","JUEGO","FUTBOL","CRICKET","TENIS","DINERO",
+"ORO","PLATINO","DIAMANTE","TIEMPO","SUENO","LUZ","SOMBRA","COLOR","SONIDO","VOZ",
+"NUMERO","CARTA","PALABRA","HISTORIA","SECRETO","MAGIA","FANTASMA","ANGEL","DRAGON","ROBOT","ALIENIGENA"
+],
+fr: [
+"CHIEN","CHAT","LION","TIGRE","OURS","ELEPHANT","CHEVAL","POISSON","OISEAU","SERPENT",
+"LAPIN","SOURIS","LOUP","RENARD","CERF","MOUTON","CHEVRE","VACHE","COCHON","SINGE",
+"AIGLE","HIBOU","REQUIN","BALEINE","DAUPHIN","GRENOUILLE","CANARD","POULET","ABEILLE","FOURMI",
+"ARAIGNEE","PAPILLON","CHAMEAU","ZEBRE","GIRAFE","KANGOUROU","PINGOUIN","TORTUE","CROCODILE","PERROQUET",
+"SOLEIL","LUNE","ETOILE","CIEL","NUAGE","PLUIE","NEIGE","VENT","FEU","EAU",
+"TERRE","MONTAGNE","RIVIERE","OCEAN","LAC","FORET","ARBRE","FLEUR","HERBE","DESERT",
+"ILE","PLAGE","VOLCAN","TEMPETE","ARCENCIEL","ROCHE","SABLE","GLACE",
+"TABLE","CHAISE","PORTE","FENETRE","LIT","LAMPE","LIVRE","STYLO","PAPIER","CLE",
+"HORLOGE","MIROIR","TELEPHONE","ORDINATEUR","APPAREILPHOTO","COUTEAU","FOURCHETTE","CUILLERE","ASSIETTE","TASSE",
+"BOUTEILLE","SAC","BOITE","BALLE","CHAUSSURE","CHAPEAU","CHEMISE","BAGUE","COLLIER","PARAPLUIE",
+"BOUGIE","CARTE","ECHELLE","CORDE","MARTEAU","CLOU",
+"MAISON","ECOLE","HOPITAL","TEMPLE","MARCHE","PARC","VILLE","VILLAGE","PONT","ROUTE",
+"AEROPORT","HOTEL","RESTAURANT","BIBLIOTHEQUE","MUSEE","FERME","JARDIN","CUISINE","TOUR","CHATEAU",
+"PALAIS","PRISON","BANQUE",
+"PAIN","RIZ","LAIT","OEUF","FROMAGE","BEURRE","SUCRE","SEL","MIEL","POMME",
+"BANANE","ORANGE","MANGUE","RAISIN","CITRON","POMMEDETERRE","TOMATE","OIGNON","AIL","VIANDE",
+"GATEAU","CHOCOLAT","CAFE","THE","SOUPE",
+"TETE","OEIL","OREILLE","NEZ","BOUCHE","MAIN","PIED","JAMBE","BRAS","COEUR",
+"CHEVEUX","DENT","DOIGT",
+"VOITURE","TRAIN","AVION","NAVIRE","BATEAU","BUS","VELO","CAMION","MOTO","HELICOPTERE","FUSEE",
+"MEDECIN","PROFESSEUR","POLICE","SOLDAT","FERMIER","ARTISTE","CHANTEUR","DANSEUR","ROI","REINE",
+"PRINCE","PRINCESSE","AMI","FAMILLE","ENFANT","BEBE","ETUDIANT","CHEF","PILOTE","ECRIVAIN",
+"AMOUR","PAIX","GUERRE","MUSIQUE","DANSE","JEU","FOOTBALL","CRICKET","TENNIS","ARGENT",
+"OR","PLATINE","DIAMANT","TEMPS","REVE","LUMIERE","OMBRE","COULEUR","SON","VOIX",
+"NOMBRE","LETTRE","MOT","HISTOIRE","SECRET","MAGIE","FANTOME","ANGE","DRAGON","ROBOT","EXTRATERRESTRE"
+],
+hi: [
+"KUTTA","BILLI","SHER","BAAGH","BHALU","HAATHI","GHODA","MACHLI","CHIDIYA","SAAP",
+"KHARGOSH","CHUHA","BHEDIYA","LOMDI","HIRAN","BHED","BAKRI","GAAY","SUAR","BANDAR",
+"UKAAB","ULLU","SHARK","WHALE","DOLPHIN","MENDAK","BATTAKH","MURGI","MADHUMAKHI","CHEENTI",
+"MAKADI","TITLI","OONT","ZEBRA","JIRAFFE","KANGAROO","PENGUIN","KACHUA","MAGARMACH","TOTA",
+"SURAJ","CHAND","TAARA","AASMAN","BADAL","BAARISH","BARF","HAWA","AAG","PAANI",
+"PRITHVI","PAHAAD","NADI","SAAGAR","JHEEL","JUNGLE","PED","PHOOL","GHAAS","REGISTAN",
+"DWEEP","KINARA","JWALAMUKHI","TOOFAN","INDRADHANUSH","PATTHAR","RET","ICE",
+"MEZ","KURSI","DARWAZA","KHIDKI","PALANG","LAMP","KITAB","KALAM","KAAGAZ","CHAABI",
+"GHADI","AAINA","PHONE","COMPUTER","CAMERA","CHAAKU","KAANTA","CHAMMACH","THAALI","PYAALA",
+"BOTAL","BAG","DIBBA","GEND","JOOTA","TOPI","KAMEEZ","ANGOOTHI","HAAR","CHHATA",
+"MOMBATTI","NAKSHA","SEEDHI","RASSI","HATHODA","KEEL",
+"GHAR","SCHOOL","ASPATAL","MANDIR","BAZAAR","PARK","SHAHAR","GAON","PUL","SADAK",
+"AIRPORT","HOTEL","RESTAURANT","PUSTAKALAYA","MUSEUM","KHET","BAGICHA","RASOI","MEENAR","KILA",
+"MAHAL","JEL","BANK",
+"BREAD","CHAWAL","DOODH","ANDA","CHEEZ","MAKHAN","CHEENI","NAMAK","SHAHAD","SEB",
+"KELA","SANTRA","AAM","ANGOOR","NIMBU","AALOO","TAMATAR","PYAAZ","LEHSUN","GOSHT",
+"CAKE","CHOCOLATE","COFFEE","CHAI","SOUP",
+"SIR","AANKH","KAAN","NAAK","MUNH","HAATH","PAIR","TAANG","BAAZU","DIL",
+"BAAL","DAANT","UNGLI",
+"GAADI","TRAIN","VIMAN","JAHAAZ","NAAV","BUS","SAIKIL","TRUCK","BIKE","HELICOPTER","ROCKET",
+"DAAKTAR","GURU","POLICE","SIPAHI","KISAN","KALAKAR","GAAYAK","NARTAK","RAJA","RANI",
+"RAJKUMAR","RAJKUMARI","DOST","PARIVAR","BACHCHA","SHISHU","CHHATRA","BAWARCHI","PILOT","LEKHAK",
+"PYAAR","SHANTI","YUDDH","SANGEET","NRITYA","KHEL","FOOTBALL","CRICKET","TENNIS","PAISA",
+"SONA","PLATINUM","HEERA","SAMAY","SAPNA","ROSHNI","CHHAYA","RANG","AAWAAZ","SWAR",
+"SANKHYA","CHITTHI","SHABD","KAHANI","RAAZ","JAADU","BHOOT","FARISHTA","DRAGON","ROBOT","ALIEN"
+]
+};
+
+const LANG_NAMES = { en: "English", es: "Español", fr: "Français", hi: "Hindi (Roman)" };
+
+/* =========================================================================
+   STATE
+   ========================================================================= */
+let state = {
+  language: localStorage.getItem('cn_language') || 'en',
+  startPref: localStorage.getItem('cn_startPref') || 'random',
+  board: [],
+  currentTeam: 'red',
+  remaining: { red: 9, blue: 8 },
+  gameOver: false,
+  spymasterMode: false
+};
+
+function getUsedWords(lang) {
+  try {
+    return JSON.parse(localStorage.getItem('cn_used_' + lang) || '[]');
+  } catch (e) { return []; }
+}
+function setUsedWords(lang, arr) {
+  localStorage.setItem('cn_used_' + lang, JSON.stringify(arr));
+}
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function pickWords(lang, count) {
+  const all = WORDS[lang];
+  let used = getUsedWords(lang);
+  let available = all.filter(w => !used.includes(w));
+  if (available.length < count) {
+    used = [];
+    available = all.slice();
+  }
+  const picked = shuffle(available).slice(0, count);
+  setUsedWords(lang, used.concat(picked));
+  return picked;
+}
+
+function buildBoard(startingTeam) {
+  const words = pickWords(state.language, 25);
+  const counts = { [startingTeam]: 9, [startingTeam === 'red' ? 'blue' : 'red']: 8 };
+  const types = [];
+  for (let i = 0; i < counts.red; i++) types.push('red');
+  for (let i = 0; i < counts.blue; i++) types.push('blue');
+  for (let i = 0; i < 7; i++) types.push('neutral');
+  types.push('assassin');
+  const shuffledTypes = shuffle(types);
+  return words.map((w, i) => ({ word: w, type: shuffledTypes[i], revealed: false }));
+}
+
+/* =========================================================================
+   SETUP SCREEN LOGIC
+   ========================================================================= */
+function setupChoiceButtons(groupEl, attr, currentValue, onPick) {
+  groupEl.querySelectorAll('.choice-btn').forEach(btn => {
+    if (btn.dataset[attr] === currentValue) btn.classList.add('selected');
+    btn.addEventListener('click', () => {
+      groupEl.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      onPick(btn.dataset[attr]);
+    });
+  });
+}
+
+let pendingLang = state.language;
+let pendingStart = state.startPref;
+
+setupChoiceButtons(document.getElementById('langGroup'), 'lang', state.language, v => pendingLang = v);
+setupChoiceButtons(document.getElementById('startTeamGroup'), 'team', state.startPref, v => pendingStart = v);
+
+document.getElementById('rulesToggle').addEventListener('click', () => {
+  document.getElementById('rulesBox').classList.toggle('hidden');
+});
+
+document.getElementById('startGameBtn').addEventListener('click', () => {
+  state.language = pendingLang;
+  state.startPref = pendingStart;
+  localStorage.setItem('cn_language', state.language);
+  localStorage.setItem('cn_startPref', state.startPref);
+  startNewGame();
+  document.getElementById('setupScreen').classList.add('hidden');
+  document.getElementById('gameScreen').classList.remove('hidden');
+});
+
+/* =========================================================================
+   GAME LOGIC
+   ========================================================================= */
+function resolveStartingTeam() {
+  if (state.startPref === 'random') return Math.random() < 0.5 ? 'red' : 'blue';
+  return state.startPref;
+}
+
+function startNewGame() {
+  const startingTeam = resolveStartingTeam();
+  state.board = buildBoard(startingTeam);
+  state.currentTeam = startingTeam;
+  state.remaining = {
+    red: state.board.filter(c => c.type === 'red').length,
+    blue: state.board.filter(c => c.type === 'blue').length
+  };
+  state.gameOver = false;
+  state.spymasterMode = false;
+  document.getElementById('clueWord').value = '';
+  document.getElementById('clueNumber').value = '';
+  document.getElementById('clueLog').textContent = '';
+  document.getElementById('spymasterBannerWrap').classList.add('hidden');
+  document.getElementById('board').classList.remove('spymaster-mode');
+  renderBoard();
+  updateTopbar();
+}
+
+function renderBoard() {
+  const boardEl = document.getElementById('board');
+  boardEl.innerHTML = '';
+  state.board.forEach((cell, idx) => {
+    const div = document.createElement('div');
+    div.className = 'word-card';
+    if (cell.revealed) {
+      div.classList.add('revealed', cell.type);
+    } else {
+      div.classList.add('key-' + cell.type);
+    }
+    div.textContent = cell.word;
+    div.addEventListener('click', () => onCardClick(idx));
+    boardEl.appendChild(div);
+  });
+  if (state.spymasterMode) boardEl.classList.add('spymaster-mode');
+}
+
+function updateTopbar() {
+  document.getElementById('redScore').textContent = state.remaining.red;
+  document.getElementById('blueScore').textContent = state.remaining.blue;
+  const banner = document.getElementById('turnBanner');
+  banner.textContent = (state.currentTeam === 'red' ? "RED" : "BLUE") + " TEAM'S TURN";
+  banner.classList.remove('red', 'blue');
+  banner.classList.add(state.currentTeam);
+}
+
+function switchTurn() {
+  state.currentTeam = state.currentTeam === 'red' ? 'blue' : 'red';
+  updateTopbar();
+}
+
+function onCardClick(idx) {
+  if (state.gameOver) return;
+  const cell = state.board[idx];
+  if (cell.revealed) return;
+
+  cell.revealed = true;
+
+  if (cell.type === 'assassin') {
+    renderBoard();
+    const winner = state.currentTeam === 'red' ? 'blue' : 'red';
+    endGame(winner, (state.currentTeam === 'red' ? 'Red' : 'Blue') + ' team hit the Assassin card.');
+    return;
+  }
+
+  if (cell.type === 'red' || cell.type === 'blue') {
+    state.remaining[cell.type]--;
+  }
+
+  renderBoard();
+  updateTopbar();
+
+  if (state.remaining.red <= 0) {
+    endGame('red', 'Red team revealed all their words!');
+    return;
+  }
+  if (state.remaining.blue <= 0) {
+    endGame('blue', 'Blue team revealed all their words!');
+    return;
+  }
+
+  if (cell.type !== state.currentTeam) {
+    switchTurn();
+  }
+}
+
+function endGame(winnerTeam, subtitle) {
+  state.gameOver = true;
+  const modal = document.getElementById('winModal');
+  modal.classList.remove('red-win', 'blue-win');
+  modal.classList.add(winnerTeam + '-win');
+  document.getElementById('winTitle').textContent = (winnerTeam === 'red' ? 'RED' : 'BLUE') + ' TEAM WINS!';
+  document.getElementById('winTitle').style.color = winnerTeam === 'red' ? 'var(--red)' : 'var(--blue)';
+  document.getElementById('winSubtitle').textContent = subtitle;
+  document.getElementById('winOverlay').classList.remove('hidden');
+}
+
+document.getElementById('endTurnBtn').addEventListener('click', () => {
+  if (state.gameOver) return;
+  switchTurn();
+});
+
+document.getElementById('newGameBtn').addEventListener('click', () => {
+  startNewGame();
+});
+
+document.getElementById('submitClueBtn').addEventListener('click', () => {
+  const word = document.getElementById('clueWord').value.trim();
+  const num = document.getElementById('clueNumber').value.trim();
+  if (!word) return;
+  const teamLabel = state.currentTeam === 'red' ? 'Red' : 'Blue';
+  document.getElementById('clueLog').innerHTML =
+    teamLabel + "'s clue: <b>" + word.toUpperCase() + '</b>' + (num !== '' ? ' — ' + num : '');
+});
+
+/* Spymaster reveal with confirmation */
+document.getElementById('spymasterToggleBtn').addEventListener('click', () => {
+  if (state.spymasterMode) {
+    state.spymasterMode = false;
+    document.getElementById('board').classList.remove('spymaster-mode');
+    document.getElementById('spymasterBannerWrap').classList.add('hidden');
+    document.getElementById('spymasterToggleBtn').textContent = '🔑 Reveal Key (Spymasters Only)';
+  } else {
+    document.getElementById('confirmOverlay').classList.remove('hidden');
+  }
+});
+document.getElementById('confirmCancel').addEventListener('click', () => {
+  document.getElementById('confirmOverlay').classList.add('hidden');
+});
+document.getElementById('confirmShow').addEventListener('click', () => {
+  document.getElementById('confirmOverlay').classList.add('hidden');
+  state.spymasterMode = true;
+  document.getElementById('board').classList.add('spymaster-mode');
+  document.getElementById('spymasterBannerWrap').classList.remove('hidden');
+  document.getElementById('spymasterToggleBtn').textContent = '🙈 Hide Key';
+});
+
+/* Win overlay actions */
+document.getElementById('winNewGameBtn').addEventListener('click', () => {
+  document.getElementById('winOverlay').classList.add('hidden');
+  startNewGame();
+});
+document.getElementById('winSettingsBtn').addEventListener('click', () => {
+  document.getElementById('winOverlay').classList.add('hidden');
+  openSettingsOverlay();
+});
+
+/* ---------- Mid-game settings overlay ---------- */
+function openSettingsOverlay() {
+  const langGroup2 = document.getElementById('langGroup2');
+  const startGroup2 = document.getElementById('startTeamGroup2');
+  langGroup2.innerHTML = '';
+  startGroup2.innerHTML = '';
+  Object.keys(LANG_NAMES).forEach(code => {
+    const b = document.createElement('button');
+    b.className = 'choice-btn';
+    b.dataset.lang2 = code;
+    b.textContent = LANG_NAMES[code];
+    if (code === state.language) b.classList.add('selected');
+    langGroup2.appendChild(b);
+  });
+  [['red', 'Red', 'team-red'], ['blue', 'Blue', 'team-blue'], ['random', 'Random', '']].forEach(([val, label, cls]) => {
+    const b = document.createElement('button');
+    b.className = 'choice-btn ' + cls;
+    b.dataset.team2 = val;
+    b.textContent = label;
+    if (val === state.startPref) b.classList.add('selected');
+    startGroup2.appendChild(b);
+  });
+
+  let pLang = state.language, pStart = state.startPref;
+  langGroup2.querySelectorAll('.choice-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      langGroup2.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      pLang = btn.dataset.lang2;
+    });
+  });
+  startGroup2.querySelectorAll('.choice-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      startGroup2.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      pStart = btn.dataset.team2;
+    });
+  });
+
+  document.getElementById('settingsApply').onclick = () => {
+    state.language = pLang;
+    state.startPref = pStart;
+    localStorage.setItem('cn_language', state.language);
+    localStorage.setItem('cn_startPref', state.startPref);
+    document.getElementById('settingsOverlay').classList.add('hidden');
+    startNewGame();
+  };
+
+  document.getElementById('settingsOverlay').classList.remove('hidden');
+}
+document.getElementById('settingsBtn').addEventListener('click', openSettingsOverlay);
+document.getElementById('settingsCancel').addEventListener('click', () => {
+  document.getElementById('settingsOverlay').classList.add('hidden');
+});
+</script>
+</body>
+</html>
