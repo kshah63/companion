@@ -312,7 +312,7 @@
       <!-- ---- Board setup ---- -->
       <div id="boardSetupPanel">
         <div class="field">
-          <label>Language</label>
+          <label>Languages (pick one or more &mdash; mixes them into the same board)</label>
           <div class="btn-group" id="langGroup">
             <button class="choice-btn" data-lang="en">English</button>
             <button class="choice-btn" data-lang="es">Español</button>
@@ -349,7 +349,7 @@
         <h3>How to play (everyone in the same room)</h3>
         <ul>
           <li>Split into two teams: Red and Blue. Each team picks one <b>Spymaster</b>; everyone else is a <b>Guesser</b>.</li>
-          <li>One phone is "The Board" — set it in the middle of the table so all the guessers can see the word grid. Whoever set it up picks the language and taps Start Game.</li>
+          <li>One phone is "The Board" — set it in the middle of the table so all the guessers can see the word grid. Whoever set it up picks one or more languages (pick more than one to mix words from all of them onto the same board) and taps Start Game.</li>
           <li>The Board screen shows a short <b>Game Code</b>. Each Spymaster opens this same page on their <b>own phone</b>, chooses "A Spymaster", types in that code, and privately sees which words belong to which team — no need to hide anything from guessers, and no internet connection required to sync.</li>
           <li>The spymaster gives a one-word clue plus a number, e.g. "OCEAN — 2". Say it out loud, or type it into the Board's clue box so everyone can see it.</li>
           <li>Guessers tap words on the Board they think match the clue. Guessing your own team's color lets you keep guessing. Guessing neutral (tan) or the other team's color ends your turn. Guessing the black <b>Assassin</b> card loses the game instantly for your team.</li>
@@ -373,7 +373,8 @@
     </div>
 
     <div class="code-banner">
-      Game Code (spymasters, enter this on your own phone): <span class="code-value" id="gameCodeDisplay">--</span>
+      Game Code (spymasters, enter this on your own phone): <span class="code-value" id="gameCodeDisplay">--</span><br>
+      <span id="gameLanguagesDisplay"></span>
     </div>
 
     <div class="turn-banner" id="turnBanner">RED TEAM'S TURN</div>
@@ -446,7 +447,7 @@
     <h2>Settings</h2>
     <p style="color:var(--muted); font-size:0.9rem;">Changing settings will end the current board.</p>
     <div class="field" style="text-align:left;">
-      <label>Language</label>
+      <label>Languages (pick one or more)</label>
       <div class="btn-group" id="langGroup2"></div>
     </div>
     <div class="field" style="text-align:left;">
@@ -586,12 +587,25 @@ hi: [
 };
 
 const LANG_NAMES = { en: "English", es: "Español", fr: "Français", hi: "Hindi (Roman)" };
+const LANG_ORDER = ['en', 'es', 'fr', 'hi'];
+
+function langNamesJoin(codes) {
+  return codes.map(c => LANG_NAMES[c]).join(' + ');
+}
+
+function loadStoredLanguages() {
+  try {
+    const stored = JSON.parse(localStorage.getItem('cn_languages') || 'null');
+    if (Array.isArray(stored) && stored.length > 0 && stored.every(c => LANG_ORDER.includes(c))) return stored;
+  } catch (e) { /* fall through to default */ }
+  return ['en'];
+}
 
 /* =========================================================================
    STATE
    ========================================================================= */
 let state = {
-  language: localStorage.getItem('cn_language') || 'en',
+  languages: loadStoredLanguages(),
   startPref: localStorage.getItem('cn_startPref') || 'random',
   board: [],
   currentTeam: 'red',
@@ -639,12 +653,24 @@ function shuffle(arr, rng) {
   return a;
 }
 
-const LANG_LETTER = { en: 'E', es: 'S', fr: 'F', hi: 'H' };
-const LETTER_LANG = { E: 'en', S: 'es', F: 'fr', H: 'hi' };
+/* Game code layout (8 chars, e.g. "9R048291"):
+   [0] = hex digit 1-F, a bitmask over LANG_ORDER selecting which languages are mixed in
+   [1] = R or B, the starting team
+   [2-7] = 6-digit random seed
+   Encoding the language set directly in the code (instead of relying on
+   both devices picking matching settings) means a Spymaster's phone can
+   rebuild the exact same mixed-language board from the code alone. */
+function languagesToMask(languages) {
+  return languages.reduce((mask, lang) => mask | (1 << LANG_ORDER.indexOf(lang)), 0);
+}
+function maskToLanguages(mask) {
+  return LANG_ORDER.filter((lang, i) => mask & (1 << i));
+}
 
-function generateGameCode(lang, startingTeam) {
+function generateGameCode(languages, startingTeam) {
+  const maskChar = languagesToMask(languages).toString(16).toUpperCase();
   const seedDigits = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
-  return LANG_LETTER[lang] + (startingTeam === 'red' ? 'R' : 'B') + seedDigits;
+  return maskChar + (startingTeam === 'red' ? 'R' : 'B') + seedDigits;
 }
 function formatGameCode(code) {
   return code.slice(0, 2) + '-' + code.slice(2);
@@ -652,16 +678,19 @@ function formatGameCode(code) {
 function parseGameCode(raw) {
   const code = (raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
   if (code.length !== 8) return null;
-  const language = LETTER_LANG[code[0]];
+  const mask = parseInt(code[0], 16);
+  if (isNaN(mask) || mask < 1 || mask > 15) return null;
+  const languages = maskToLanguages(mask);
   const startingTeam = code[1] === 'R' ? 'red' : (code[1] === 'B' ? 'blue' : null);
   const seed = code.slice(2);
-  if (!language || !startingTeam || !/^\d{6}$/.test(seed)) return null;
-  return { language, startingTeam, seed, code };
+  if (!startingTeam || languages.length === 0 || !/^\d{6}$/.test(seed)) return null;
+  return { languages, startingTeam, seed, code };
 }
 
-function buildBoardFromCode(language, startingTeam, seed) {
-  const rng = makeRng(language + '|' + startingTeam + '|' + seed);
-  const words = shuffle(WORDS[language], rng).slice(0, 25);
+function buildBoardFromCode(languages, startingTeam, seed) {
+  const rng = makeRng(languages.join(',') + '|' + startingTeam + '|' + seed);
+  const pool = Array.from(new Set(languages.flatMap(lang => WORDS[lang])));
+  const words = shuffle(pool, rng).slice(0, 25);
   const otherTeam = startingTeam === 'red' ? 'blue' : 'red';
   const types = [];
   for (let i = 0; i < 9; i++) types.push(startingTeam);
@@ -686,10 +715,32 @@ function setupChoiceButtons(groupEl, attr, currentValue, onPick) {
   });
 }
 
-let pendingLang = state.language;
+/* Multi-select: any number of buttons can be active, but at least one
+   must stay selected (deselecting the last active one is a no-op). */
+function setupMultiChoiceButtons(groupEl, attr, currentValues, onChange) {
+  let selected = currentValues.slice();
+  groupEl.querySelectorAll('.choice-btn').forEach(btn => {
+    if (selected.includes(btn.dataset[attr])) btn.classList.add('selected');
+    btn.addEventListener('click', () => {
+      const val = btn.dataset[attr];
+      if (selected.includes(val)) {
+        if (selected.length === 1) return;
+        selected = selected.filter(v => v !== val);
+        btn.classList.remove('selected');
+      } else {
+        selected.push(val);
+        btn.classList.add('selected');
+      }
+      onChange(selected.slice());
+    });
+  });
+  return () => selected.slice();
+}
+
+let pendingLangs = state.languages.slice();
 let pendingStart = state.startPref;
 
-setupChoiceButtons(document.getElementById('langGroup'), 'lang', state.language, v => pendingLang = v);
+setupMultiChoiceButtons(document.getElementById('langGroup'), 'lang', state.languages, v => pendingLangs = v);
 setupChoiceButtons(document.getElementById('startTeamGroup'), 'team', state.startPref, v => pendingStart = v);
 
 document.getElementById('rulesToggle').addEventListener('click', () => {
@@ -710,9 +761,9 @@ document.getElementById('roleSpymasterBtn').addEventListener('click', () => {
 });
 
 document.getElementById('startGameBtn').addEventListener('click', () => {
-  state.language = pendingLang;
+  state.languages = pendingLangs.slice();
   state.startPref = pendingStart;
-  localStorage.setItem('cn_language', state.language);
+  localStorage.setItem('cn_languages', JSON.stringify(state.languages));
   localStorage.setItem('cn_startPref', state.startPref);
   startNewGame();
   document.getElementById('setupScreen').classList.add('hidden');
@@ -743,10 +794,10 @@ function resolveStartingTeam() {
 
 function startNewGame() {
   const startingTeam = resolveStartingTeam();
-  const code = generateGameCode(state.language, startingTeam);
+  const code = generateGameCode(state.languages, startingTeam);
   const parsed = parseGameCode(code);
   state.gameCode = code;
-  state.board = buildBoardFromCode(parsed.language, parsed.startingTeam, parsed.seed);
+  state.board = buildBoardFromCode(parsed.languages, parsed.startingTeam, parsed.seed);
   state.currentTeam = startingTeam;
   state.remaining = {
     red: state.board.filter(c => c.type === 'red').length,
@@ -760,6 +811,7 @@ function startNewGame() {
   document.getElementById('spymasterBannerWrap').classList.add('hidden');
   document.getElementById('board').classList.remove('spymaster-mode');
   document.getElementById('gameCodeDisplay').textContent = formatGameCode(state.gameCode);
+  document.getElementById('gameLanguagesDisplay').textContent = langNamesJoin(parsed.languages);
   renderBoard();
   updateTopbar();
 }
@@ -917,7 +969,6 @@ function openSettingsOverlay() {
     b.className = 'choice-btn';
     b.dataset.lang2 = code;
     b.textContent = LANG_NAMES[code];
-    if (code === state.language) b.classList.add('selected');
     langGroup2.appendChild(b);
   });
   [['red', 'Red', 'team-red'], ['blue', 'Blue', 'team-blue'], ['random', 'Random', '']].forEach(([val, label, cls]) => {
@@ -929,14 +980,8 @@ function openSettingsOverlay() {
     startGroup2.appendChild(b);
   });
 
-  let pLang = state.language, pStart = state.startPref;
-  langGroup2.querySelectorAll('.choice-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      langGroup2.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
-      btn.classList.add('selected');
-      pLang = btn.dataset.lang2;
-    });
-  });
+  let pStart = state.startPref;
+  const getLangs2 = setupMultiChoiceButtons(langGroup2, 'lang2', state.languages, () => {});
   startGroup2.querySelectorAll('.choice-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       startGroup2.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
@@ -946,9 +991,9 @@ function openSettingsOverlay() {
   });
 
   document.getElementById('settingsApply').onclick = () => {
-    state.language = pLang;
+    state.languages = getLangs2();
     state.startPref = pStart;
-    localStorage.setItem('cn_language', state.language);
+    localStorage.setItem('cn_languages', JSON.stringify(state.languages));
     localStorage.setItem('cn_startPref', state.startPref);
     document.getElementById('settingsOverlay').classList.add('hidden');
     startNewGame();
@@ -969,12 +1014,12 @@ document.getElementById('settingsCancel').addEventListener('click', () => {
 let keyScreenMarks = new Set();
 
 function openSpymasterKeyScreen(parsed) {
-  const board = buildBoardFromCode(parsed.language, parsed.startingTeam, parsed.seed);
+  const board = buildBoardFromCode(parsed.languages, parsed.startingTeam, parsed.seed);
   keyScreenMarks = new Set();
 
   document.getElementById('keyScreenCode').textContent = formatGameCode(parsed.code);
   document.getElementById('keyScreenInfo').textContent =
-    LANG_NAMES[parsed.language] + ' · ' + (parsed.startingTeam === 'red' ? 'Red' : 'Blue') + ' goes first';
+    langNamesJoin(parsed.languages) + ' · ' + (parsed.startingTeam === 'red' ? 'Red' : 'Blue') + ' goes first';
 
   const redCount = parsed.startingTeam === 'red' ? 9 : 8;
   const blueCount = parsed.startingTeam === 'blue' ? 9 : 8;

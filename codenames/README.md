@@ -11,7 +11,7 @@ If you'd rather host it (e.g. GitHub Pages, or a local server so it's one link t
 ## How to play
 
 1. Split into a Red team and a Blue team. Each team picks one **Spymaster**; everyone else is a **Guesser**.
-2. One phone becomes **"The Board"** — set it in the middle of the table so all the guessers can see the word grid. Whoever set it up picks a language (English, Spanish, French, or Hindi — romanized in English letters, no Devanagari) and who goes first, then taps **Start Game**.
+2. One phone becomes **"The Board"** — set it in the middle of the table so all the guessers can see the word grid. Whoever set it up picks one or more languages (English, Spanish, French, and/or Hindi — romanized in English letters, no Devanagari) and who goes first, then taps **Start Game**. Picking more than one language mixes words from all of them onto the same board.
 3. The Board shows a short **Game Code** (like `HR-048291`). Each Spymaster opens `index.html` on their **own phone**, chooses **"A Spymaster"**, types in that code, and privately sees the color key for every word — no need to hide anything from guessers, and it works with zero internet connection because both devices deterministically rebuild the identical board from that one code.
 4. The spymaster gives a one-word clue plus a number (say it aloud, or type it into the Board's clue box).
 5. Guessers tap words on the Board. Your own team's color keeps your turn going; the other team's color, a neutral (tan) word, or manually tapping **End Turn** passes the turn. The black **Assassin** card ends the game instantly for whoever taps it.
@@ -21,6 +21,7 @@ Only have one phone total? The Board also has a **Reveal Key (fallback, this dev
 
 ## Notes
 
-- The game code encodes the language, starting team, and a random seed — nothing else is transmitted or stored anywhere; both devices just run the same shuffle algorithm from that seed.
+- The game code encodes which language(s) are in play, the starting team, and a random seed — nothing else is transmitted or stored anywhere; both devices just run the same shuffle algorithm from that seed.
+- When multiple languages are selected, any word that happens to be spelled the same in more than one of them (common with loanwords, e.g. "HOTEL" or "TRAIN") only appears once on the board.
 - A spymaster's key screen lets them tap a word to cross it off once it's been guessed, purely as a personal memory aid — it's local to their phone and doesn't affect the real board.
 - Starting a new board always generates a fresh code, so spymasters need to re-enter it each round.
